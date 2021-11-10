@@ -11,17 +11,12 @@ Description:
 
 Usage:
   InstallWindowsUpdates.ps1
-  -OR-
-  InstallWindowsUpdates.exe
 
 Updates:
   - 10/11/2019 Script Creation
 
 #>
-#process waiting needs to be added
-# Allow running Powershell scripts unsigned and unrestricted
-Set-ExecutionPolicy Unrestricted |
-    Out-Null
+
 # Install Nuget Package manager
 Install-PackageProvider NuGet -Force |
     Out-Null
@@ -42,9 +37,6 @@ Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -Confirm:$f
     Out-Null
 # Download, Accept, and Install all Windows Updates.  Ignore rebooting to get it all done at once
 Install-WindowsUpdate -microsoftupdate -acceptall -ignorereboot |
-    Out-Null
-# Set the execution policy back to restricted for security reasons
-Set-ExecutionPolicy Restricted |
     Out-Null
 # Reboot the computer
 Restart-Computer
