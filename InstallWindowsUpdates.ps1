@@ -20,8 +20,8 @@ Updates:
 #>
 #process waiting needs to be added
 # Allow running Powershell scripts unsigned and unrestricted
-Set-ExecutionPolicy Unrestricted |
-    Out-Null
+#Set-ExecutionPolicy Unrestricted |
+#    Out-Null
 # Install Nuget Package manager
 Install-PackageProvider NuGet -Force |
     Out-Null
