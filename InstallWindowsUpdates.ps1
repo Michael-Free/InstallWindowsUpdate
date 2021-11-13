@@ -91,11 +91,6 @@ function update_windows {
     return $false
   }
 }
-
-function  run_updates {
-
-}
-
 if (check_admin -eq $true) {
   Write-Host "Administrative Rights have been verified..."
   if (get_pswinupdate -eq $true) {
