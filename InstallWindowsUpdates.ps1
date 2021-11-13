@@ -3,43 +3,112 @@ Name:
   InstallWindowsUpdates
 
 Description:
-  This script will install Windows Updates silently and remotely for computers on an active
-  directory domain.
+  This script will install Windows Updates silently and all at once without multiple reboots.
 
-  This is was created when we were restarting many old computers that hadn't be started up
-  in 2 years due to COVID-19.
+  This is was created when we were restarting many old computers that hadn't be started up in 
+  2 years due to COVID-19. This is also great for a computer that has just recently had windows 
+  installed on it and needs to catch up on updates.
 
 Usage:
   InstallWindowsUpdates.ps1
-
-Updates:
-  - 10/11/2019 Script Creation
-
 #>
-#process waiting needs to be added
-# Allow running Powershell scripts unsigned and unrestricted
-#Set-ExecutionPolicy Unrestricted |
-#    Out-Null
-# Install Nuget Package manager
-Install-PackageProvider NuGet -Force |
-    Out-Null
-# Import the new commands associated with NuGet
-Import-PackageProvider NuGet -Force |
-    Out-Null
-# Trust the scripts from the PowerShell Gallery online
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted |
-    Out-Null
-# Install the PowerShell WindowsUpdate Module
-Install-Module PSWindowsUpdate |
-    Out-Null
-# Add the commands for WindowsUpdate
-Get-Command -Module PSWindowsUpdate |
-    Out-Null
-# Add the opt-in for Windows Updates without having to manually confirm
-Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -Confirm:$false |
-    Out-Null
-# Download, Accept, and Install all Windows Updates.  Ignore rebooting to get it all done at once
-Install-WindowsUpdate -microsoftupdate -acceptall -ignorereboot |
-    Out-Null
-# Reboot the computer
-Restart-Computer
+
+function check_admin {
+  $checkadmin = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+  $checkadmin.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function get_nuget {
+  $CheckNuget = Get-PackageProvider | where-object {$_.Name -eq "NuGet"}
+  if ($null -ne $CheckNuget) {
+    return $true
+  } else {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    if ($?) {
+      Install-PackageProvider NuGet -Force
+      if ($?) {
+        Import-PackageProvider NuGet -Force
+        if ($?) {
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          if ($?) {
+            return $true
+          } else {
+            Write-Warning "Failed to set PSGallery as a trusted installation repository for NuGet..."
+            return $false
+          }
+        } else {
+          write-warning "Failed to import NuGet package provider..."
+          return $false
+        }
+      } else {
+        Write-Warning "NuGet failed to install..."
+        return $false
+      }
+    } else {
+      Write-Warning "Failed to install TLS 1.2 to install NuGet"
+      return $false
+    }
+  }
+}
+
+function get_pswinupdate {
+  if (get-module -ListAvailable -Name PSWindowsUpdate) {
+    return $true
+  } else {
+    Write-Warning "PSWindowsUpdate module is not installed..."
+    if (get_nuget -eq $true) {
+      Install-Module PSWindowsUpdate
+      if ($?) {
+        Get-Command -Module PSWindowsUpdate
+        if ($?) {
+          return $true
+        } else {
+         Write-Warning "Failed to import PSWindowsUpdate module..."
+         return $false
+        }
+      } else {
+        Write-Warning "Failed to install PSWindowsUpdate module..."
+        return $false
+      }
+    } else {
+      return $false
+    }
+  }
+}
+
+function update_windows {
+  Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -Confirm:$false
+  if ($?) {
+      Install-WindowsUpdate -microsoftupdate -acceptall -ignorereboot 
+      if ($?) {
+        return $true
+      } else {
+        Write-Warning "Failed to download and install all Windows Updates..."
+        return $false
+      }
+  } else {
+    Write-Warning "Failed to opt-in for automatic windows update confirmations..."
+    return $false
+  }
+}
+
+function  run_updates {
+
+}
+
+if (check_admin -eq $true) {
+  Write-Host "Administrative Rights have been verified..."
+  if (get_pswinupdate -eq $true) {
+    Write-Host "PSWindowsUpdate module was successful. Installing updates..."
+    if (update_windows -eq $true) {
+      Write-Host "Windows Updates have completed successfully. Please reboot the computer when ready..."
+    } else {
+      exit 1
+    }
+  } else {
+    exit 1
+  }
+} else {
+  Write-Warning "InstallWindowsUpdates.ps1 must be ran with Administrative Rights..."
+  exit 1
+}
