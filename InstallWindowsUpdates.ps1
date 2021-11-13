@@ -97,6 +97,7 @@ if (check_admin -eq $true) {
     Write-Host "PSWindowsUpdate module was successful. Installing updates..."
     if (update_windows -eq $true) {
       Write-Host "Windows Updates have completed successfully. Please reboot the computer when ready..."
+      exit 0
     } else {
       exit 1
     }
